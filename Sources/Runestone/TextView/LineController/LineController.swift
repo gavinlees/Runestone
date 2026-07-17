@@ -334,7 +334,11 @@ private extension LineController {
     private func createLineSyntaxHighlightInput() -> LineSyntaxHighlighterInput? {
         if let attributedString = attributedString {
             let byteRange = line.data.totalByteRange
-            return LineSyntaxHighlighterInput(attributedString: attributedString, byteRange: byteRange)
+            return LineSyntaxHighlighterInput(
+                attributedString: attributedString,
+                byteRange: byteRange,
+                lineIndex: line.index,
+                lineLocation: line.location)
         } else {
             return nil
         }
