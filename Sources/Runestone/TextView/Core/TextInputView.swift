@@ -357,6 +357,11 @@ final class TextInputView: UIView, UITextInput {
             layoutManager.layoutIfNeeded()
         }
     }
+    /// Invoked with PNG data when an image is pasted. Runestone's own paste is
+    /// string-only; a host that stores images out-of-band (e.g. a markdown editor
+    /// inserting a reference) supplies this to intercept an image-only pasteboard
+    /// instead of having the paste silently dropped.
+    var onImagePasted: ((Data) -> Void)?
     var lineBreakMode: LineBreakMode = .byWordWrapping {
         didSet {
             if lineBreakMode != oldValue {
@@ -730,6 +735,13 @@ final class TextInputView: UIView, UITextInput {
     }
 
     override func paste(_ sender: Any?) {
+        // Image-only pasteboard: hand PNG data to the host (which stores it
+        // out-of-band) rather than dropping the paste. Strings still paste as text.
+        if let onImagePasted, !UIPasteboard.general.hasStrings, UIPasteboard.general.hasImages,
+           let image = UIPasteboard.general.image, let data = image.pngData() {
+            onImagePasted(data)
+            return
+        }
         if let selectedTextRange = selectedTextRange, let string = UIPasteboard.general.string {
             inputDelegate?.selectionWillChange(self)
             let preparedText = prepareTextForInsertion(string)
@@ -776,7 +788,8 @@ final class TextInputView: UIView, UITextInput {
                 return false
             }
         } else if action == #selector(paste(_:)) {
-            return isEditing && UIPasteboard.general.hasStrings
+            return isEditing && (UIPasteboard.general.hasStrings
+                || (onImagePasted != nil && UIPasteboard.general.hasImages))
         } else if action == #selector(selectAll(_:)) {
             return true
         } else if action == #selector(replace(_:)) {

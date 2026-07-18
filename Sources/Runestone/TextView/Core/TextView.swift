@@ -475,6 +475,19 @@ open class TextView: UIScrollView {
             textInputView.lineWrappingProvider = newValue
         }
     }
+    /// Invoked with PNG data when an image is pasted. Runestone's built-in paste
+    /// is string-only (an image-only pasteboard is otherwise dropped, and the
+    /// Paste menu item stays disabled). A host that stores images out-of-band —
+    /// e.g. a markdown editor inserting a reference — assigns this to intercept
+    /// image paste; text paste is unaffected.
+    public var onImagePasted: ((Data) -> Void)? {
+        get {
+            textInputView.onImagePasted
+        }
+        set {
+            textInputView.onImagePasted = newValue
+        }
+    }
     /// Width of the gutter.
     public var gutterWidth: CGFloat {
         textInputView.gutterWidth
