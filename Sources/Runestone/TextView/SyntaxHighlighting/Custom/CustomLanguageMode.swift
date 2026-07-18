@@ -25,6 +25,33 @@ public protocol LineHighlighter: AnyObject {
     ///   - lineLocation: UTF-16 offset of the line's first character within the
     ///     document. Add to a line-relative offset to get a document offset.
     func highlight(_ attributedString: NSMutableAttributedString, lineIndex: Int, lineLocation: Int)
+
+    /// Notify the highlighter that the document changed, so it can update its
+    /// own incremental model *before* the affected lines are re-laid out.
+    ///
+    /// Called synchronously on the main thread as part of the edit, once per
+    /// edit. Offsets are document-absolute UTF-16 — the same representation
+    /// `highlight(_:lineIndex:lineLocation:)` uses — so a host highlighter never
+    /// has to touch Runestone's internal byte offsets.
+    ///
+    /// - Parameters:
+    ///   - startUtf16: UTF-16 offset where the replaced range began.
+    ///   - oldLengthUtf16: UTF-16 length of the text that was replaced.
+    ///   - replacement: The text that now occupies the range (already applied to
+    ///     the document).
+    /// - Returns: Zero-based indices of every line whose styling may have
+    ///   changed, *including* lines the edit did not touch textually (e.g. lines
+    ///   recoloured by opening a fenced code block). Runestone re-highlights
+    ///   exactly these lines in addition to the ones the edit structurally
+    ///   changed. Return an empty array for a highlighter that recomputes lazily
+    ///   inside `highlight(...)`.
+    func applyEdit(startUtf16: Int, oldLengthUtf16: Int, replacement: String) -> [Int]
+}
+
+public extension LineHighlighter {
+    /// Default: no explicit incremental update. Suits a highlighter that
+    /// recomputes lazily when each line is laid out.
+    func applyEdit(startUtf16: Int, oldLengthUtf16: Int, replacement: String) -> [Int] { [] }
 }
 
 /// Highlights text using a `LineHighlighter` supplied by the host app, instead

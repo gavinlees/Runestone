@@ -12,9 +12,13 @@ import Foundation
 /// instead; this mode is for styling only.
 final class CustomInternalLanguageMode: InternalLanguageMode {
     private let highlighter: LineHighlighter
+    private let stringView: StringView
+    private let lineManager: LineManager
 
-    init(highlighter: LineHighlighter) {
+    init(highlighter: LineHighlighter, stringView: StringView, lineManager: LineManager) {
         self.highlighter = highlighter
+        self.stringView = stringView
+        self.lineManager = lineManager
     }
 
     func parse(_ text: NSString) {}
@@ -24,10 +28,30 @@ final class CustomInternalLanguageMode: InternalLanguageMode {
     }
 
     func textDidChange(_ change: TextChange) -> LineChangeSet {
-        // The host highlighter owns its own incremental update; returning an
-        // empty change set leaves Runestone's own line invalidation (driven by
-        // the edit itself) to decide what to re-highlight.
-        LineChangeSet()
+        // Hand the edit to the host highlighter in document-absolute UTF-16 —
+        // ByteCount is UTF-16 units × 2, so `utf16Length` is an exact halving,
+        // never a UTF-8 conversion. The replacement text is read back from the
+        // already-updated document. The highlighter updates its own incremental
+        // model and tells us every line whose styling may have moved (including
+        // recoloured-but-untouched lines, e.g. below a newly-opened fence); we
+        // mark those edited so Runestone re-runs the highlighter on them.
+        // Structurally edited lines are covered by Runestone's own change set,
+        // which is unioned with this one.
+        let startUtf16 = change.byteRange.location.utf16Length
+        let oldLengthUtf16 = change.byteRange.length.utf16Length
+        let newLengthUtf16 = change.bytesAdded.utf16Length
+        let replacement = stringView.substring(
+            in: NSRange(location: startUtf16, length: newLengthUtf16)) ?? ""
+        let affectedLines = highlighter.applyEdit(
+            startUtf16: startUtf16,
+            oldLengthUtf16: oldLengthUtf16,
+            replacement: replacement)
+        let changeSet = LineChangeSet()
+        let lineCount = lineManager.lineCount
+        for row in affectedLines where row >= 0 && row < lineCount {
+            changeSet.markLineEdited(lineManager.line(atRow: row))
+        }
+        return changeSet
     }
 
     func createLineSyntaxHighlighter() -> LineSyntaxHighlighter {

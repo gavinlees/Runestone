@@ -12,7 +12,10 @@ enum InternalLanguageModeFactory {
                 stringView: stringView,
                 lineManager: lineManager)
         case let languageMode as CustomLanguageMode:
-            return CustomInternalLanguageMode(highlighter: languageMode.highlighter)
+            return CustomInternalLanguageMode(
+                highlighter: languageMode.highlighter,
+                stringView: stringView,
+                lineManager: lineManager)
         default:
             fatalError("\(languageMode) is not a supported language mode")
         }
