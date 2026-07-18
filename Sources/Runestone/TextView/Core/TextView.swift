@@ -461,6 +461,20 @@ open class TextView: UIScrollView {
             textInputView.lineBreakMode = newValue
         }
     }
+    /// Per-line wrap override. Return `false` for a line index to lay that line
+    /// out unwrapped (single fragment) regardless of ``isLineWrappingEnabled``;
+    /// return `true` or `nil` to wrap it normally. Lets a host wrap prose while
+    /// keeping fenced code on one unwrapped line per source line, as the
+    /// TextKit2 code-block model does. Assign again to re-evaluate after the
+    /// backing classification changes.
+    public var lineWrappingProvider: ((Int) -> Bool)? {
+        get {
+            textInputView.lineWrappingProvider
+        }
+        set {
+            textInputView.lineWrappingProvider = newValue
+        }
+    }
     /// Width of the gutter.
     public var gutterWidth: CGFloat {
         textInputView.gutterWidth

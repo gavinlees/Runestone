@@ -346,6 +346,17 @@ final class TextInputView: UIView, UITextInput {
             }
         }
     }
+    var lineWrappingProvider: ((Int) -> Bool)? {
+        get {
+            layoutManager.lineWrappingProvider
+        }
+        set {
+            layoutManager.lineWrappingProvider = newValue
+            invalidateLines()
+            layoutManager.setNeedsLayout()
+            layoutManager.layoutIfNeeded()
+        }
+    }
     var lineBreakMode: LineBreakMode = .byWordWrapping {
         didSet {
             if lineBreakMode != oldValue {

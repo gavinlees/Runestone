@@ -101,6 +101,18 @@ final class LayoutManager {
             return 10_000
         }
     }
+    /// Host-supplied per-line wrap override. When it returns `false` for a line
+    /// index, that line is laid out unwrapped (constraining width 10_000)
+    /// regardless of the global `isLineWrappingEnabled`. Lets a host wrap prose
+    /// while keeping fenced code on a single unwrapped fragment per line.
+    var lineWrappingProvider: ((Int) -> Bool)?
+
+    private func constrainingWidth(for line: DocumentLineNode) -> CGFloat {
+        if let lineWrappingProvider, lineWrappingProvider(line.index) == false {
+            return 10_000
+        }
+        return constrainingLineWidth
+    }
     var markedRange: NSRange? {
         didSet {
             if markedRange != oldValue {
@@ -370,7 +382,7 @@ extension LayoutManager {
             let lineLocation = line.location
             let endTypesettingLocation = min(lineLocation + line.data.length, location) - lineLocation
             let lineController = lineControllerStorage.getOrCreateLineController(for: line)
-            lineController.constrainingWidth = constrainingLineWidth
+            lineController.constrainingWidth = constrainingWidth(for: line)
             lineController.prepareToDisplayString(toLocation: endTypesettingLocation, syntaxHighlightAsynchronously: true)
             let lineSize = CGSize(width: lineController.lineWidth, height: lineController.lineHeight)
             contentSizeService.setSize(of: lineController.line, to: lineSize)
@@ -403,7 +415,7 @@ extension LayoutManager {
             let lineLocalViewport = CGRect(x: 0, y: maxY, width: insetViewport.width, height: insetViewport.maxY - maxY)
             let lineController = lineControllerStorage.getOrCreateLineController(for: line)
             let oldLineHeight = lineController.lineHeight
-            lineController.constrainingWidth = constrainingLineWidth
+            lineController.constrainingWidth = constrainingWidth(for: line)
             lineController.prepareToDisplayString(in: lineLocalViewport, syntaxHighlightAsynchronously: true)
             layoutLineNumberView(for: line)
             // Layout line fragments ("sublines") in the line until we have filled the viewport.
