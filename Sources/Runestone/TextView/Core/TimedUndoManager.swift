@@ -20,10 +20,13 @@ final class TimedUndoManager: UndoManager {
     override func beginUndoGrouping() {
         if !hasOpenGroup {
             super.beginUndoGrouping()
-            if endGroupingTimer == nil {
-                scheduleTimer()
-            }
         }
+        // Restart the inactivity timer on every edit so a continuous run of
+        // keystrokes coalesces into a single undo group that closes only after a
+        // pause. Previously the timer was scheduled just once — from the first
+        // keystroke — so any typing slower than `endGroupingInterval` fragmented
+        // into per-character undo steps.
+        scheduleTimer()
     }
 
     override func endUndoGrouping() {
@@ -41,6 +44,7 @@ final class TimedUndoManager: UndoManager {
 
 private extension TimedUndoManager {
     private func scheduleTimer() {
+        cancelTimer()
         let timer = Timer(timeInterval: endGroupingInterval, target: self, selector: #selector(timerDidTrigger), userInfo: nil, repeats: false)
         endGroupingTimer = timer
         RunLoop.main.add(timer, forMode: .common)
